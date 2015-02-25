@@ -46,6 +46,22 @@ namespace InjeShooter.PSEngine
             mForm.FormClosing += mForm_FormClosing;
         }
 
+        public void SetSize(Point size)
+        {
+            mForm.Width = size.X;
+            mForm.Height = size.Y;
+        }
+
+        public void SetSizeMode(FormWindowState state)
+        {
+            mForm.WindowState = state;
+        }
+
+        public void SetBorderStyle(FormBorderStyle style)
+        {
+            mForm.FormBorderStyle = style;
+        }
+
         void mForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             this.Finish();
@@ -60,20 +76,17 @@ namespace InjeShooter.PSEngine
 
         void mForm_SizeChanged(object sender, EventArgs e)
         {
-            if (backBuffer != null)
+            if (mForm.WindowState != FormWindowState.Minimized)
             {
-                if (mForm.WindowState != FormWindowState.Minimized)
-                {
-                    if (state == RunningState.RUNNING)
-                    {
-                        backBuffer.Dispose();
-                        backBuffer = new Bitmap(mForm.Size.Width, mForm.Size.Height);
-                    }
-                    if (coreThread.IsAlive == null)
-                        this.Resume();
-                }
-                else this.Pause();
+                if (backBuffer != null)
+                    backBuffer.Dispose();
+                backBuffer = new Bitmap(mForm.Size.Width, mForm.Size.Height);
+                Graphics g = Graphics.FromImage(backBuffer);
+                g.Clear(_MainColor);
+                if (coreThread == null)
+                    this.Resume();
             }
+            else this.Pause();
         }
 
         public void SetScene(PSScene scene)
@@ -110,7 +123,8 @@ namespace InjeShooter.PSEngine
             {
                 list_RState.Add(RunningState.FINISHED);
             }
-            coreThread.Join();
+            if(coreThread != null)
+                coreThread.Join();
         }
 
         private void CoreThread()
@@ -120,7 +134,7 @@ namespace InjeShooter.PSEngine
             long oldTime = timer.ElapsedMilliseconds;
             long elapsedTime = 0;
             int fps = 0;
-            while (true)
+            while (state != RunningState.FINISHED)
             {
                 lock (list_RState)
                 {
@@ -133,7 +147,6 @@ namespace InjeShooter.PSEngine
                                 this.scene.OnFinished();
                                 list_RState.Clear();
                                 timer.Stop();
-                                coreThread = null;
                                 return;
                             case RunningState.PAUSED:
                                 this.scene.OnPaused();
